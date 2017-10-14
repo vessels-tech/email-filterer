@@ -44,7 +44,20 @@ const getRules = () => {
 const getUnfilteredMail = () => {
 
   return admin.database().ref(UNFILTERED_ROOT).once('value')
-  .then(snapshot => snapshot.val());
+  .then(snapshot => {
+    const value = snapshot.val();
+
+    console.log("value:", value);
+    if (!value) {
+      return {};
+    }
+
+    return value;
+  })
+  .catch(err => {
+    console.log(err);
+    return {};
+  });
 }
 
 /**
@@ -94,7 +107,7 @@ exports.triggerCheckEmail = functions.https.onRequest((req, res) => {
     const summaryString = `You have *${important.length}* important, and *${boring.length}* boring emails.`;
     return admin.database().ref(AGGREGATE_ROOT).push().set(summaryString);
   })
-  .then(() => clearUnfilteredMail());
+  .then(() => clearUnfilteredMail())
   .then(() => {
     return res.status(200).send(true);
   })
