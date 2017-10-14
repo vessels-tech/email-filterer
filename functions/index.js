@@ -27,18 +27,40 @@ const OUTGOING_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/2292424/i950xr/';
  */
 exports.triggerCheckEmail = functions.https.onRequest((req, res) => {
 
+  return admin.database().ref(RULES_ROOT).once('value')
+  .then(snapshot) => {
+    const allValues = snapshot.val();
+    console.log(allValues);
 
-  //read all the unfiltered emails.
-  //format: fromAddress, fromName, messageBody
-  return admin.database().ref('raw/').once('value', (snapshot) => {
+    return admin.database().ref(UNFILTERED_ROOT).once('value');
+  })
+  .then(snapshot => {
+    const filterIn = ["lewisdaly@me.com", 'engagespark'];
+    const important = [];
+    const boring = [];
+
     const allValues = snapshot.val();
     const keys = Object.keys(allValues);
 
     keys.forEach(key => {
-      console.log(allValues[key]);
+      const value = JSON.stringify(allValues[key]).toLowerCase();
+
+      let isImportant = false;
+      filterIn.forEach(filter => {
+        if (value.indexOf(filter) > -1) {
+          isImportant = true;
+        }
+      });
+
+      if (isImportant) {
+        important.push(value);
+      } else {
+        boring.push(value);
+      }
     });
 
-    return admin.database().ref(AGGREGATE_ROOT).push().set("You've got mail");
+    const summaryString = `You have *${important.length}* important, and *${boring.length}* boring emails.`;
+    return admin.database().ref(AGGREGATE_ROOT).push().set(summaryString);
   })
   .then(() => {
     return res.status(200).send(true);
@@ -52,8 +74,8 @@ exports.triggerCheckEmail = functions.https.onRequest((req, res) => {
   // //TODO: read filtered rules from /rules. This works for now:
   // const filterIn = ["lewisdaly@me.com", 'engagespark'];
   //
-  // const important = [];
-  // const boring = [];
+  //
+  //
   //
   // //build a summary string, and add to /aggregated
   // const summaryString = `You have ${important.length} important emails, and ${boring.length} emails.`;
