@@ -27,8 +27,8 @@ const OUTGOING_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/2292424/i950xr/';
  */
 exports.triggerCheckEmail = functions.https.onRequest((req, res) => {
 
-  return admin.database().ref(RULES_ROOT).once('value')
-  .then(snapshot) => {
+  return admin.database().ref(RULES_ROOT).once('value', (snapshot) => {
+  
     const allValues = snapshot.val();
     console.log(allValues);
 
