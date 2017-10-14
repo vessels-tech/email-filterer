@@ -21,29 +21,55 @@ const AGGREGATE_ROOT = '/aggregated';
 const OUTGOING_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/2292424/i950xr/';
 
 
+
+/**
+ * Get all of the rules, for now just a simple list of strings
+ *
+ * @returns Promise<list>
+ */
+const getRules = () => {
+  return admin.database().ref(RULES_ROOT).once('value')
+  .then(snapshot => {
+    const allRules = snapshot.val();
+    filterIn = Object.keys(allRules).map(key => {
+      return allRules[key];
+    });
+
+    return filterIn;
+  });
+};
+
+/**
+ * Get all of the unfiltered email
+ *
+ * @returns Promise<Object>
+ */
+const getUnfilteredMail = () => {
+  return admin.database().ref(UNFILTERED_ROOT).once('value')
+  .then(snapshot => snapshot.val());
+}
+
+
 /**
  * Called to trigger a database check.
  *
  */
 exports.triggerCheckEmail = functions.https.onRequest((req, res) => {
+  let filterIn = null;
 
-  return admin.database().ref(RULES_ROOT).once('value', (snapshot) => {
-  
-    const allValues = snapshot.val();
-    console.log(allValues);
-
-    return admin.database().ref(UNFILTERED_ROOT).once('value');
-  })
-  .then(snapshot => {
-    const filterIn = ["lewisdaly@me.com", 'engagespark'];
+  return getRules()
+  .then(_filterIn => filterIn = _filterIn)
+  .then(() => getUnfilteredMail())
+  .then(allValues => {
     const important = [];
     const boring = [];
 
-    const allValues = snapshot.val();
+    console.log('All values: ', allValues);
     const keys = Object.keys(allValues);
 
     keys.forEach(key => {
       const value = JSON.stringify(allValues[key]).toLowerCase();
+      console.log('Value is: ', value);
 
       let isImportant = false;
       filterIn.forEach(filter => {
@@ -54,8 +80,10 @@ exports.triggerCheckEmail = functions.https.onRequest((req, res) => {
 
       if (isImportant) {
         important.push(value);
+        console.log("this email is important");
       } else {
         boring.push(value);
+        console.log("this email is boring");
       }
     });
 
