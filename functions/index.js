@@ -28,14 +28,11 @@ const OUTGOING_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/2292424/i950xr/';
  * @returns Promise<list>
  */
 const getRules = () => {
+
   return admin.database().ref(RULES_ROOT).once('value')
   .then(snapshot => {
     const allRules = snapshot.val();
-    filterIn = Object.keys(allRules).map(key => {
-      return allRules[key];
-    });
-
-    return filterIn;
+    return Object.keys(allRules).map(key => allRules[key]);
   });
 };
 
@@ -45,10 +42,17 @@ const getRules = () => {
  * @returns Promise<Object>
  */
 const getUnfilteredMail = () => {
+
   return admin.database().ref(UNFILTERED_ROOT).once('value')
   .then(snapshot => snapshot.val());
 }
 
+/**
+ * clear the unfiltered emails
+ */
+const clearUnfilteredMail = () => {
+  return admin.database().ref(UNFILTERED_ROOT).remove();
+}
 
 /**
  * Called to trigger a database check.
@@ -57,14 +61,14 @@ const getUnfilteredMail = () => {
 exports.triggerCheckEmail = functions.https.onRequest((req, res) => {
   let filterIn = null;
 
-  return getRules()
+  return Promise.resolve(true)
+  .then(() => getRules())
   .then(_filterIn => filterIn = _filterIn)
   .then(() => getUnfilteredMail())
   .then(allValues => {
     const important = [];
     const boring = [];
 
-    console.log('All values: ', allValues);
     const keys = Object.keys(allValues);
 
     keys.forEach(key => {
@@ -90,6 +94,7 @@ exports.triggerCheckEmail = functions.https.onRequest((req, res) => {
     const summaryString = `You have *${important.length}* important, and *${boring.length}* boring emails.`;
     return admin.database().ref(AGGREGATE_ROOT).push().set(summaryString);
   })
+  .then(() => clearUnfilteredMail());
   .then(() => {
     return res.status(200).send(true);
   })
